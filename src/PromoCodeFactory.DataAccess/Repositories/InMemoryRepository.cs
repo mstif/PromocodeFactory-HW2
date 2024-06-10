@@ -29,9 +29,14 @@ namespace PromoCodeFactory.DataAccess.Repositories
 
         public Task Create(T item)
         {
+
             object locker = new();
             lock (locker)
             {
+                if (item.Id == Guid.Empty)
+                {
+                    item.Id = Guid.NewGuid();
+                }
                 var finded = GetByIdAsync(item.Id);
                 if (finded.Result != null)
                 {
