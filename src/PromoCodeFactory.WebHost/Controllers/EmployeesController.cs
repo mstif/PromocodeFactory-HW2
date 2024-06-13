@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using PromoCodeFactory.Core.Abstractions.Repositories;
 using PromoCodeFactory.Core.Domain.Administration;
+using PromoCodeFactory.Core.Exeptions;
 using PromoCodeFactory.WebHost.Models;
 
 namespace PromoCodeFactory.WebHost.Controllers
@@ -54,7 +55,7 @@ namespace PromoCodeFactory.WebHost.Controllers
             var employee = await _employeeRepository.GetByIdAsync(id);
 
             if (employee == null)
-                return NotFound();
+                return NoContent();
 
             var employeeModel = new EmployeeResponse()
             {
@@ -77,27 +78,61 @@ namespace PromoCodeFactory.WebHost.Controllers
         /// <param name="employee"></param>
         /// <returns></returns>
         [HttpPost]
-        public async Task<List<EmployeeShortResponse>> CreateEmployeeAsync(Employee employee)
+        public async Task<IActionResult> CreateEmployeeAsync(Employee employee)
         {
             if (employee != null)
-                await _employeeRepository.Create(employee);
+            {
+                try
+                {
+                    var result = await _employeeRepository.Create(employee);
 
-            return await GetEmployeesAsync();
+                    return Ok(result);
+                }
+                catch(DoubleElementException dex)
+                {
+                    return StatusCode(409,dex.Message);
+                }
+                catch (Exception ex)
+                {
+                    return StatusCode(520);
+                }
+            }
+            else return BadRequest();
+
+
 
 
         }
-       /// <summary>
-       /// Обновить элемент
-       /// </summary>
-       /// <param name="employee"></param>
-       /// <returns></returns>
+        /// <summary>
+        /// Обновить элемент
+        /// </summary>
+        /// <param name="employee"></param>
+        /// <returns></returns>
         [HttpPut]
-        public async Task<List<EmployeeShortResponse>> UpdateEmployeeAsync(Employee employee)
+        public async Task<IActionResult> UpdateEmployeeAsync(Employee employee)
         {
             if (employee != null)
-                await _employeeRepository.Update(employee);
+            {
+                try
+                {
+                    await _employeeRepository.Update(employee);
+                    return Ok(employee);
+                }
+                catch(ElementNotExistsExeption nex)
+                {
+                    return BadRequest(nex.Message);
+                }
+                catch ( Exception ex)
+                {
+                    return StatusCode(520);
+                }
+            }
+            else
+            {
+                return BadRequest();
+            }
 
-            return await GetEmployeesAsync();
+            
 
 
         }
@@ -107,15 +142,26 @@ namespace PromoCodeFactory.WebHost.Controllers
         /// <param name="id"></param>
         /// <returns></returns>
         [HttpDelete]
-        public async Task<List<EmployeeShortResponse>> DeleteEmployeeAsync(Guid id)
+        public async Task<IActionResult> DeleteEmployeeAsync(Guid id)
         {
+            try
+            {
+                await _employeeRepository.Delete(id);
+                return Ok();
+            }
+            catch(ElementNotExistsExeption nex)
+            {
+                return BadRequest(nex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(520);
+            }
 
-            await _employeeRepository.Delete(id);
 
-            return await GetEmployeesAsync();
 
 
         }
-        
+
     }
 }

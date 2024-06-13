@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using PromoCodeFactory.Core.Abstractions.Repositories;
 using PromoCodeFactory.Core.Domain;
 using PromoCodeFactory.Core.Domain.Administration;
+using PromoCodeFactory.Core.Exeptions;
 namespace PromoCodeFactory.DataAccess.Repositories
 {
     public class InMemoryRepository<T> : IRepository<T> where T : BaseEntity
@@ -27,7 +28,7 @@ namespace PromoCodeFactory.DataAccess.Repositories
             return Task.FromResult(Data.FirstOrDefault(x => x.Id == id));
         }
 
-        public Task Create(T item)
+        public Task<T> Create(T item)
         {
 
             object locker = new();
@@ -40,13 +41,13 @@ namespace PromoCodeFactory.DataAccess.Repositories
                 var finded = GetByIdAsync(item.Id);
                 if (finded.Result != null)
                 {
-                    throw new Exception("Такой элемент уже существует");
+                    throw new DoubleElementException();
                 }
                 var newData = Data.ToList();
                 newData.Add(item);
                 Data = newData;
             }
-            return Task.FromResult(Data);
+            return Task.FromResult(item);
         }
 
         public Task Update(T item)
@@ -58,7 +59,7 @@ namespace PromoCodeFactory.DataAccess.Repositories
                 var tupleIndex = Data.Select((employee, index) => (index, employee)).FirstOrDefault(t => t.employee.Id == item.Id);
                 if (tupleIndex.employee == null)
                 {
-                    throw new Exception("Такого элемента не существует");
+                    throw new ElementNotExistsExeption();
                 }
                 var newData = Data.ToList();
                 newData[tupleIndex.index] = item;
@@ -66,7 +67,7 @@ namespace PromoCodeFactory.DataAccess.Repositories
                 Data = newData;
 
             }
-            return Task.FromResult(Data);
+            return Task.CompletedTask;
         }
 
         public Task Delete(Guid id)
@@ -78,14 +79,14 @@ namespace PromoCodeFactory.DataAccess.Repositories
                 var newData = Data.Where(t => t.Id != id);
                 if (newData.Count() == Data.Count())
                 {
-                    throw new Exception("Такого элемента не существует");
+                    throw new ElementNotExistsExeption();
                 }
 
 
                 Data = newData;
 
             }
-            return Task.FromResult(Data);
+            return Task.CompletedTask;
         }
     }
 }
